@@ -1,32 +1,173 @@
-# Prerequisites
-*.d
+#include <DS3231.h>  //คำสั่งโมดูล DS3231
+#include "SPI.h"  //คำสั่งโมดูล SD Card
+#include "SD.h"  //คำสั่งโมดูล SD Card
+#define SD_ChipSelectPin 10  //กำหนดขาในการสื่อสารโมดูล SD Card Pin10
+#include "TMRpcm.h"  //คำสั่งโมดูล SD Card สำหรับเปิดไฟล์เสียง
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+char mychar;  //เปิดใช้ mychar สำหรับโมดูล SD Card
+const int chipSelect = 10;  //กำหนดขาในการสื่อสารโมดูล SD Card Pin10
+TMRpcm tmrpcm;  //กำหนดฟังก์ชัน TMRpcm
+File myFile;  //กำหนดฟังก์ชัน myFile
+ DS3231 rtc(SDA, SCL);  //กำหนดขาในการสื่อสารโมดูล DS3231
+ Time t;  //กำหนดตัวแปร T
+ int Relay1 = 3;  //กำหนดขาในการสื่อสารโมดูล Relay Pin3
 
-# Precompiled Headers
-*.gch
-*.pch
+ const int Timeh1  = 8;
+ const int Timem1  = 5;  //กำหนดเวลานโยบายเช้า hour,min,sec
+ const int Times1  = 0;
+ 
+ const int Timeh2  = 10;
+ const int Timem2  = 0;  //กำหนดเวลาล้างมื้อครั้งที่1 hour,min,sec
+ const int Times2  = 0;
+ 
+ const int Timeh3  = 13;
+ const int Timem3  = 0;  //กำหนดเวลานโยบายบ่าย hour,min,sec
+ const int Times3  = 0;
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+ const int Timeh4  = 15;
+ const int Timem4  = 0;  //กำหนดเวลาล้างมื้อครั้งที่2 hour,min,sec
+ const int Times4  = 0;
 
-# Fortran module files
-*.mod
-*.smod
+ const int Timeh5  = 20;
+ const int Timem5  = 0;  //กำหนดเวลาล้างมื้อครั้งที่3 hour,min,sec
+ const int Times5  = 0;
+ 
+ const int Timeh6  = 23;
+ const int Timem6  = 0;  //กำหนดเวลาล้างมื้อครั้งที่4 hour,min,sec
+ const int Times6  = 0;
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+  
+ void setup() //การตั้งค่าระบบการทำงาน
+ {
+  tmrpcm.speakerPin = 9;  //กำหนดขาเสียงออก Pin9
+  Serial.begin(115200);  //กำหนด baudrate
+  rtc.begin();  //คำสั่ง rtc ทำงาน
+  pinMode(Relay1, OUTPUT);  //กำหนด Relay1 เป็น Output
+  digitalWrite(Relay1,HIGH);  //กำหนด Relay1-off
+  
+  if (!SD.begin(SD_ChipSelectPin)) {
+Serial.println("SD fail");
+  {
+   tmrpcm.disable();  //ตัดการเชื่อมต่อ TMRpcm
+  }
+return;
+}
+while (!Serial) {;
+}
+Serial.println("Initializing SD card...");  //Initializing SD card...
+pinMode(SS, OUTPUT);
 
-# Executables
-*.exe
-*.out
-*.app
+if (!SD.begin(chipSelect)) { //SD Card เชื่อมต่อเข้ากับ
+Serial.println("Card failed, or not present!");  //Serial แสดง Card failed, or not present
+return;
+}
+Serial.println("card initialized.");  //Serial แสดง card initialized
+myFile = SD.open("datalog.txt", FILE_WRITE);  //เปิดใช้คำสั่งเขียนไฟล์ datalog
+myFile.close(); //ปิดไฟล์
+ }
+
+ void loop() 
+ {
+  t = rtc.getTime();  //สั่ง rtc เก็บค่าไว้ในตัวแปร t
+  Serial.print(t.hour);  //Serial แสดงชั่วโมงปัจจุบัน
+  Serial.print(":");
+  Serial.print(t.min);  //Serial แสดงนาทีปัจจุบัน
+  Serial.print(":");
+  Serial.print(t.sec);  //Serial แสดงวินาทีปัจจุบัน
+  Serial.println(" ");
+  delay (1000);  //ดีเลย์ 1วินาที
+ 
+  if(t.hour == Timeh1 && t.min == Timem1 && t.sec == Times1)  //เมื่อถึงระยะเวลาที่กำหนดไว้ (นโยบายเช้า)
+    {
+      digitalWrite(Relay1,LOW);  //Relay-on
+  delay(1000);
+  tmrpcm.setVolume(5);  //ตั้งความดังของเสียง 0-7
+  tmrpcm.play("1.wav");  //ชื่อไฟล์ .สกุล WAV
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.print("  ");
+  Serial.println("1.นโยบาย - รอบเช้า");
+  delay(73000);{  //ดีเลย์ 1นาที 13วินาที
+    delay(1000);
+    digitalWrite(Relay1, HIGH);  //Relay-off
+    tmrpcm.disable();  //ตัดการเชื่อมต่อ TMRpcm
+  }
+    }
+    else if(t.hour == Timeh2 && t.min == Timem2 && t.sec == Times2)
+    {
+    digitalWrite(Relay1,LOW);
+  delay(1000);
+  tmrpcm.setVolume(5); 
+  tmrpcm.play("2.wav");
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.println("2.ล้างมือ - ครี่งที่1");
+  delay(24500);{
+    tmrpcm.disable();
+    delay(1000);
+    digitalWrite(Relay1,HIGH);
+  }
+ }
+   else if(t.hour == Timeh3 && t.min == Timem3 && t.sec == Times3)
+    {
+ digitalWrite(Relay1,LOW);
+  delay(1000);
+  tmrpcm.play("1.wav");
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.println("3.นโยบาย - รอบบ่าย");
+  delay(73000);{
+    tmrpcm.disable();
+    delay(1000);
+    digitalWrite(Relay1,HIGH);
+    }
+  }
+else if(t.hour == Timeh4 && t.min == Timem4&& t.sec == Times4)
+    {
+digitalWrite(Relay1,LOW);
+  delay(1000);
+  tmrpcm.play("2.wav");
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.println("4.ล้างมือ - ครี่งที่2");
+  delay(24500);{
+    tmrpcm.disable();
+    delay(1000);
+    digitalWrite(Relay1,HIGH);
+    }
+   }
+   else if(t.hour == Timeh5 && t.min == Timem5 && t.sec == Times5)
+    {
+digitalWrite(Relay1,LOW);
+  delay(1000);
+  tmrpcm.play("2.wav");
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.println("5.ล้างมือ - ครี่งที่3");
+  delay(24500);{
+    tmrpcm.disable();
+    delay(1000);
+    digitalWrite(Relay1,HIGH);
+    }
+   }
+   else if(t.hour == Timeh6 && t.min == Timem6 && t.sec == Times6)
+    {
+digitalWrite(Relay1,LOW);
+  delay(1000);
+  tmrpcm.play("2.wav");
+  Serial.println("_______________________________");
+  Serial.println(" ");
+  Serial.println(">> Music Play <<");
+  Serial.println("6.ล้างมือ - ครี่งที่4");
+  delay(24500);{
+    tmrpcm.disable();
+    delay(1000);
+    digitalWrite(Relay1,HIGH);
+    }
+   }
+ }
